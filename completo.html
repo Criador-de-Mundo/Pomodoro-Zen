@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pomodoro Zen - Criador de Mundo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+        body {
+            background: linear-gradient(135deg, #f5f0e6 0%, #e8e0d0 100%);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: #fef9e8;
+            border-radius: 32px;
+            padding: 30px 25px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 1px solid #e0d5c0;
+        }
+        h1 {
+            color: #4a3b2c;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        .timer-circle {
+            background: #f3ecd9;
+            border-radius: 50%;
+            width: 220px;
+            height: 220px;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 6px solid #d9cba8;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05), 0 8px 15px rgba(0,0,0,0.1);
+        }
+        .timer-text {
+            font-size: 2.5rem;
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            color: #5c4b32;
+            letter-spacing: 4px;
+        }
+        .phase {
+            margin: 10px 0;
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #b88b4a;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        button {
+            background: #e8ddc5;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #5c4b32;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button:active {
+            transform: scale(0.96);
+            background: #d4c5a8;
+        }
+        .notify-btn {
+            background: #2c5f2d;
+            color: white;
+            margin-top: 10px;
+            width: 100%;
+            padding: 12px;
+        }
+        .notify-btn:active {
+            background: #1e3a1e;
+        }
+        .subscribe {
+            margin-top: 20px;
+            background: #c3a36b;
+            padding: 12px;
+            border-radius: 50px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.1s;
+            font-weight: bold;
+            color: white;
+        }
+        .subscribe:active {
+            transform: scale(0.97);
+        }
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+            .timer-circle {
+                width: 180px;
+                height: 180px;
+            }
+            .timer-text {
+                font-size: 2rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🍅 POMODORO ZEN</h1>
+    <div class="timer-circle">
+        <div class="timer-text" id="timerDisplay">25:00</div>
+    </div>
+    <div class="phase" id="phaseText">⚡ Foco (25 min)</div>
+    <div class="controls">
+        <button id="startBtn">▶ INICIAR</button>
+        <button id="pauseBtn">⏸ PAUSAR</button>
+        <button id="resetBtn">🔄 RESETAR</button>
+    </div>
+    <button class="notify-btn" id="requestNotifyBtn">🔔 ATIVAR NOTIFICAÇÕES</button>
+    <div class="subscribe" onclick="window.open('https://youtube.com/@CriadorDeMundo', '_blank')">
+        🎥 APRENDA A FAZER - INSCREVA-SE
+    </div>
+</div>
+<script>
+    // Configurações
+    let focusTime = 25 * 60;
+    let breakTime = 5 * 60;
+    let currentSeconds = focusTime;
+    let isFocus = true;
+    let running = false;
+    let targetTimestamp = null;
+    let intervalId = null;
+
+    const timerDisplay = document.getElementById('timerDisplay');
+    const phaseText = document.getElementById('phaseText');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const requestNotifyBtn = document.getElementById('requestNotifyBtn');
+
+    function playBeep() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            oscillator.connect(gain);
+            gain.connect(audioCtx.destination);
+            oscillator.frequency.value = 880;
+            gain.gain.value = 0.3;
+            oscillator.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 1.5);
+            oscillator.stop(audioCtx.currentTime + 1.5);
+        } catch(e) { console.log("Áudio não suportado"); }
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+
+    function sendNotification(title, body) {
+        if (Notification.permission === 'granted') {
+            new Notification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/1995/1995572.png' });
+        } else {
+            alert(`🔔 ${title}: ${body}`);
+        }
+    }
+
+    function switchPhase() {
+        if (isFocus) {
+            isFocus = false;
+            currentSeconds = breakTime;
+            phaseText.innerText = "🌿 Pausa curta (5 min)";
+            sendNotification('🍅 Pomodoro Zen', 'Foco concluído! Hora da pausa de 5 minutos.');
+        } else {
+            isFocus = true;
+            currentSeconds = focusTime;
+            phaseText.innerText = "⚡ Foco (25 min)";
+            sendNotification('🌿 Pomodoro Zen', 'Pausa finalizada! Volte a focar por 25 minutos.');
+        }
+        updateDisplay();
+        playBeep();
+    }
+
+    function updateDisplay() {
+        let mins = Math.floor(currentSeconds / 60);
+        let secs = currentSeconds % 60;
+        timerDisplay.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+    }
+
+    function tick() {
+        if (!running) return;
+        const now = Date.now();
+        if (targetTimestamp && now >= targetTimestamp) {
+            running = false;
+            if (intervalId) clearInterval(intervalId);
+            switchPhase();
+            startTimer();
+            return;
+        }
+        if (targetTimestamp) {
+            const remaining = Math.max(0, Math.floor((targetTimestamp - now) / 1000));
+            if (remaining !== currentSeconds) {
+                currentSeconds = remaining;
+                updateDisplay();
+                if (currentSeconds <= 0) {
+                    running = false;
+                    if (intervalId) clearInterval(intervalId);
+                    switchPhase();
+                    startTimer();
+                }
+            }
+        }
+    }
+
+    function startTimer() {
+        if (running) return;
+        running = true;
+        targetTimestamp = Date.now() + currentSeconds * 1000;
+        if (intervalId) clearInterval(intervalId);
+        intervalId = setInterval(tick, 200);
+    }
+
+    function pauseTimer() {
+        if (!running) return;
+        running = false;
+        if (intervalId) clearInterval(intervalId);
+        if (targetTimestamp) {
+            currentSeconds = Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000));
+            updateDisplay();
+            targetTimestamp = null;
+        }
+    }
+
+    function resetTimer() {
+        running = false;
+        if (intervalId) clearInterval(intervalId);
+        targetTimestamp = null;
+        isFocus = true;
+        currentSeconds = focusTime;
+        phaseText.innerText = "⚡ Foco (25 min)";
+        updateDisplay();
+    }
+
+    function requestNotificationPermission() {
+        if (Notification.permission === 'default') {
+            Notification.requestPermission().then(perm => {
+                if (perm === 'granted') alert('✅ Notificações ativadas!');
+                else alert('❌ Permissão negada');
+            });
+        } else if (Notification.permission === 'granted') {
+            alert('✅ Notificações já estão ativadas');
+        } else {
+            alert('❌ Permissão negada permanentemente. Ative nas configurações do navegador.');
+        }
+    }
+
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    resetBtn.addEventListener('click', resetTimer);
+    requestNotifyBtn.addEventListener('click', requestNotificationPermission);
+
+    updateDisplay();
+    if (Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+</script>
+</body>
+</html>
