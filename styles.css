@@ -1,0 +1,131 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    touch-action: manipulation;
+}
+
+body {
+    background: linear-gradient(135deg, #f5f0e6 0%, #e8e0d0 100%);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    max-width: 500px;
+    width: 100%;
+    background: #fef9e8;
+    border-radius: 32px;
+    padding: 30px 25px;
+    box-shadow: 0 20px 35px rgba(0,0,0,0.1);
+    text-align: center;
+    border: 1px solid #e0d5c0;
+}
+
+h1 {
+    color: #4a3b2c;
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+}
+
+.timer-circle {
+    background: #f3ecd9;
+    border-radius: 50%;
+    width: 220px;
+    height: 220px;
+    margin: 20px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 6px solid #d9cba8;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.05), 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.timer-text {
+    font-size: 2.5rem;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    color: #5c4b32;
+    letter-spacing: 4px;
+}
+
+.phase {
+    margin: 10px 0;
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #b88b4a;
+}
+
+.controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 15px 0;
+}
+
+button {
+    background: #e8ddc5;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #5c4b32;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+button:active {
+    transform: scale(0.96);
+    background: #d4c5a8;
+}
+
+.notify-btn {
+    background: #2c5f2d;
+    color: white;
+    margin-top: 10px;
+    width: 100%;
+    padding: 12px;
+}
+
+.notify-btn:active {
+    background: #1e3a1e;
+}
+
+.subscribe {
+    margin-top: 20px;
+    background: #c3a36b;
+    padding: 12px;
+    border-radius: 50px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.1s;
+    font-weight: bold;
+    color: white;
+}
+
+.subscribe:active {
+    transform: scale(0.97);
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 20px;
+    }
+    .timer-circle {
+        width: 180px;
+        height: 180px;
+    }
+    .timer-text {
+        font-size: 2rem;
+    }
+    h1 {
+        font-size: 1.5rem;
+    }
+}
