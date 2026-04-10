@@ -1,28 +1,15 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Pomodoro Zen - Criador de Mundo</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Teste de Alerta</title>
 </head>
 <body>
-<div class="container">
-    <h1>🍅 POMODORO ZEN</h1>
-    <div class="timer-circle">
-        <div class="timer-text" id="timerDisplay">25:00</div>
-    </div>
-    <div class="phase" id="phaseText">⚡ Foco (25 min)</div>
-    <div class="controls">
-        <button id="startBtn">▶ INICIAR</button>
-        <button id="pauseBtn">⏸ PAUSAR</button>
-        <button id="resetBtn">🔄 RESETAR</button>
-    </div>
-    <button class="notify-btn" id="requestNotifyBtn">🔔 ATIVAR NOTIFICAÇÕES</button>
-    <div class="subscribe" onclick="window.open('https://youtube.com/@CriadorDeMundo', '_blank')">
-        🎥 APRENDA A FAZER - INSCREVA-SE
-    </div>
-</div>
-<script src="scripts.js"></script>
+    <button id="btn">Clique para testar alerta</button>
+    <script>
+        document.getElementById('btn').onclick = function() {
+            alert('Funcionou! O JavaScript está rodando.');
+        };
+    </script>
 </body>
 </html>
