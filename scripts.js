@@ -1,7 +1,7 @@
 // scripts.js - Pomodoro Zen com notificações em tempo real e fallback visual
 // Configurações
-let focusTime = 0.5 * 60;    // 25 minutos em segundos (para teste rápido, mude para 10)
-let breakTime = 0.5 * 60;     // 5 minutos
+let focusTime = 10;   // 10 segundos
+let breakTime = 5;    // 5 segundos
 let currentSeconds = focusTime;
 let isFocus = true;
 let running = false;
