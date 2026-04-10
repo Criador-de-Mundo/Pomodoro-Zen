@@ -1,13 +1,11 @@
-// scripts.js - Pomodoro Zen com notificações em tempo real e fallback visual
-// Configurações
-let focusTime = 10;   // 10 segundos
-let breakTime = 5;    // 5 segundos
+// scripts.js - Pomodoro Zen com timer confiável e notificações
+// Configurações (para teste, use 10 segundos; depois volte para 25*60)
+let focusTime = 10;        // 10 segundos (teste)
+let breakTime = 5;         // 5 segundos
 let currentSeconds = focusTime;
 let isFocus = true;
 let running = false;
-let targetTimestamp = null;
 let intervalId = null;
-let updateNotificationInterval = null;
 
 // Elementos DOM
 const timerDisplay = document.getElementById('timerDisplay');
@@ -17,39 +15,18 @@ const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
 const requestNotifyBtn = document.getElementById('requestNotifyBtn');
 
-// ========== SERVICE WORKER ==========
+// Service Worker (se existir)
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js')
-        .then(reg => console.log('Service Worker registrado', reg))
-        .catch(err => console.log('Erro ao registrar SW:', err));
+    navigator.serviceWorker.register('/service-worker.js').catch(err => console.log('SW erro:', err));
 }
 
-// Envia atualização do tempo restante para o Service Worker (notificação persistente)
-function sendTimerUpdate() {
-    if (!navigator.serviceWorker.controller) return;
-    const mins = Math.floor(currentSeconds / 60);
-    const secs = currentSeconds % 60;
-    const timeLeft = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    const phase = isFocus ? '⚡ Foco' : '🌿 Pausa';
-    navigator.serviceWorker.controller.postMessage({
-        type: 'UPDATE_TIMER',
-        timeLeft: timeLeft,
-        phase: phase,
-        isRunning: running
-    });
+// Funções auxiliares
+function updateDisplay() {
+    let mins = Math.floor(currentSeconds / 60);
+    let secs = currentSeconds % 60;
+    timerDisplay.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
 }
 
-// Envia mensagem de fim de ciclo para o Service Worker (notificação de conclusão)
-function sendTimerEnd(message) {
-    if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-            type: 'TIMER_END',
-            message: message
-        });
-    }
-}
-
-// ========== SONS E VIBRAÇÃO ==========
 function playBeep() {
     try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -60,16 +37,12 @@ function playBeep() {
         osc.frequency.value = 880;
         gain.gain.value = 0.3;
         osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 1.5);
-        osc.stop(audioCtx.currentTime + 1.5);
-    } catch (e) {
-        console.log("Áudio não suportado");
-    }
+        gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 1);
+        osc.stop(audioCtx.currentTime + 1);
+    } catch(e) { console.log("Áudio não suportado"); }
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 }
 
-// ========== FALLBACKS VISUAIS ==========
-// Exibe um toast (mensagem temporária flutuante)
 function showToast(message) {
     const toast = document.createElement('div');
     toast.innerText = message;
@@ -84,126 +57,77 @@ function showToast(message) {
     toast.style.fontWeight = 'bold';
     toast.style.zIndex = '9999';
     toast.style.fontSize = '16px';
-    toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
 
-// Tenta enviar notificação push; se falhar, usa alerta comum
 function sendNotification(title, body) {
     if (Notification.permission === 'granted') {
         new Notification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/1995/1995572.png' });
     } else {
-        alert(`🔔 ${title}: ${body}`);
+        console.log("Notificação não permitida");
     }
-}
-
-// ========== LÓGICA DO TIMER ==========
-function updateDisplay() {
-    let mins = Math.floor(currentSeconds / 60);
-    let secs = currentSeconds % 60;
-    timerDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
 function switchPhase() {
     if (isFocus) {
-        // Foco terminou → pausa curta
+        // Foco terminou -> pausa
         isFocus = false;
         currentSeconds = breakTime;
         phaseText.innerText = "🌿 Pausa curta (5 min)";
-
-        // 1. Notificação push via Service Worker
-        sendTimerEnd('🍅 Foco concluído! Hora da pausa de 5 minutos.');
-        // 2. Notificação nativa (fallback direto)
-        sendNotification('🍅 Pomodoro Zen', 'Foco concluído! Hora da pausa de 5 minutos.');
-        // 3. Alerta visual obrigatório (para teste e garantia)
-        alert('✅ Foco concluído! Hora da pausa de 5 minutos.');
-        // 4. Toast flutuante
-        showToast('🍅 Foco concluído! Pausa de 5 min');
+        const msg = '🍅 Foco concluído! Hora da pausa de 5 minutos.';
+        sendNotification('Pomodoro Zen', msg);
+        alert(msg);      // Alerta garantido
+        showToast(msg);
     } else {
-        // Pausa terminou → volta ao foco
+        // Pausa terminou -> foco
         isFocus = true;
         currentSeconds = focusTime;
         phaseText.innerText = "⚡ Foco (25 min)";
-
-        sendTimerEnd('🌿 Pausa finalizada! Volte a focar por 25 minutos.');
-        sendNotification('🌿 Pomodoro Zen', 'Pausa finalizada! Volte a focar por 25 minutos.');
-        alert('✅ Pausa finalizada! Volte a focar por 25 minutos.');
-        showToast('🌿 Pausa finalizada! Foco de 25 min');
+        const msg = '🌿 Pausa finalizada! Volte a focar por 25 minutos.';
+        sendNotification('Pomodoro Zen', msg);
+        alert(msg);
+        showToast(msg);
     }
-
     updateDisplay();
     playBeep();
-    sendTimerUpdate(); // atualiza a notificação persistente
 }
 
-function tick() {
-    if (!running) return;
-    const now = Date.now();
-    if (targetTimestamp && now >= targetTimestamp) {
-        running = false;
-        if (intervalId) clearInterval(intervalId);
-        if (updateNotificationInterval) clearInterval(updateNotificationInterval);
-        switchPhase();
-        startTimer();  // reinicia automaticamente a próxima fase
-        return;
-    }
-    if (targetTimestamp) {
-        const remaining = Math.max(0, Math.floor((targetTimestamp - now) / 1000));
-        if (remaining !== currentSeconds) {
-            currentSeconds = remaining;
-            updateDisplay();
-            if (currentSeconds <= 0) {
-                running = false;
-                if (intervalId) clearInterval(intervalId);
-                if (updateNotificationInterval) clearInterval(updateNotificationInterval);
-                switchPhase();
-                startTimer();
-            }
-        }
-    }
-}
-
+// Timer principal (simples e confiável)
 function startTimer() {
     if (running) return;
     running = true;
-    targetTimestamp = Date.now() + currentSeconds * 1000;
-    if (intervalId) clearInterval(intervalId);
-    intervalId = setInterval(tick, 200);
-    // Atualiza a notificação persistente a cada segundo
-    if (updateNotificationInterval) clearInterval(updateNotificationInterval);
-    updateNotificationInterval = setInterval(() => {
-        if (running) sendTimerUpdate();
+    intervalId = setInterval(() => {
+        if (!running) return;
+        if (currentSeconds <= 0) {
+            // Tempo esgotou
+            clearInterval(intervalId);
+            running = false;
+            switchPhase();
+            // Se quiser que o timer reinicie automaticamente a próxima fase, chame startTimer() aqui
+            startTimer(); // comente se não quiser auto-reinício
+        } else {
+            currentSeconds--;
+            updateDisplay();
+        }
     }, 1000);
-    sendTimerUpdate();
 }
 
 function pauseTimer() {
     if (!running) return;
     running = false;
     if (intervalId) clearInterval(intervalId);
-    if (updateNotificationInterval) clearInterval(updateNotificationInterval);
-    if (targetTimestamp) {
-        currentSeconds = Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000));
-        updateDisplay();
-        targetTimestamp = null;
-    }
-    sendTimerUpdate(); // mostra "pausado" na notificação
 }
 
 function resetTimer() {
     running = false;
     if (intervalId) clearInterval(intervalId);
-    if (updateNotificationInterval) clearInterval(updateNotificationInterval);
-    targetTimestamp = null;
     isFocus = true;
     currentSeconds = focusTime;
     phaseText.innerText = "⚡ Foco (25 min)";
     updateDisplay();
-    sendTimerUpdate();
 }
 
-// ========== PERMISSÃO DE NOTIFICAÇÃO ==========
 function requestNotificationPermission() {
     if (Notification.permission === 'default') {
         Notification.requestPermission().then(perm => {
@@ -213,16 +137,16 @@ function requestNotificationPermission() {
     } else if (Notification.permission === 'granted') {
         alert('✅ Notificações já estão ativadas');
     } else {
-        alert('❌ Permissão negada permanentemente. Ative nas configurações do navegador.');
+        alert('❌ Permissão negada permanentemente. Ative nas configurações.');
     }
 }
 
-// ========== EVENT LISTENERS ==========
+// Event listeners
 startBtn.addEventListener('click', startTimer);
 pauseBtn.addEventListener('click', pauseTimer);
 resetBtn.addEventListener('click', resetTimer);
 requestNotifyBtn.addEventListener('click', requestNotificationPermission);
 
-// ========== INICIALIZAÇÃO ==========
+// Inicialização
 updateDisplay();
 if (Notification.permission === 'default') Notification.requestPermission();
