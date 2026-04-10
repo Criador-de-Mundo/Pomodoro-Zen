@@ -3,57 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Pomodoro Zen - Áudio e Push</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; }
-        body {
-            background: linear-gradient(135deg, #f5f0e6 0%, #e8e0d0 100%);
-            font-family: 'Segoe UI', system-ui;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .container {
-            max-width: 500px;
-            width: 100%;
-            background: #fef9e8;
-            border-radius: 32px;
-            padding: 30px 25px;
-            text-align: center;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.1);
-        }
-        h1 { color: #4a3b2c; font-size: 1.8rem; margin-bottom: 10px; }
-        .timer-circle {
-            background: #f3ecd9;
-            border-radius: 50%;
-            width: 220px;
-            height: 220px;
-            margin: 20px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 6px solid #d9cba8;
-        }
-        .timer-text { font-size: 2.5rem; font-family: monospace; font-weight: bold; color: #5c4b32; }
-        .phase { margin: 10px 0; font-size: 1.2rem; color: #b88b4a; }
-        button {
-            background: #e8ddc5;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 40px;
-            font-weight: bold;
-            margin: 5px;
-            cursor: pointer;
-        }
-        .notify-btn { background: #2c5f2d; color: white; margin-top: 10px; width: 100%; }
-        .subscribe { margin-top: 20px; background: #c3a36b; padding: 12px; border-radius: 50px; color: white; cursor: pointer; }
-        @media (max-width: 480px) {
-            .timer-circle { width: 180px; height: 180px; }
-            .timer-text { font-size: 2rem; }
-        }
-    </style>
+    <title>Pomodoro Zen - Criador de Mundo</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="container">
@@ -62,163 +13,15 @@
         <div class="timer-text" id="timerDisplay">25:00</div>
     </div>
     <div class="phase" id="phaseText">⚡ Foco (25 min)</div>
-    <div>
+    <div class="controls">
         <button id="startBtn">▶ INICIAR</button>
         <button id="pauseBtn">⏸ PAUSAR</button>
         <button id="resetBtn">🔄 RESETAR</button>
     </div>
-    <button class="notify-btn" id="requestNotifyBtn">🔔 ATIVAR NOTIFICAÇÕES</button>
     <div class="subscribe" onclick="window.open('https://youtube.com/@CriadorDeMundo', '_blank')">
         🎥 APRENDA A FAZER - INSCREVA-SE
     </div>
 </div>
-
-<script>
-    // ================= CONFIGURAÇÕES =================
-    let focusTime = 10;        // 10 segundos para teste (depois mude para 25*60)
-    let breakTime = 5;         // 5 segundos
-    let currentSeconds = focusTime;
-    let isFocus = true;
-    let running = false;
-    let intervalId = null;
-
-    // Elementos
-    const timerDisplay = document.getElementById('timerDisplay');
-    const phaseText = document.getElementById('phaseText');
-    const startBtn = document.getElementById('startBtn');
-    const pauseBtn = document.getElementById('pauseBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const requestNotifyBtn = document.getElementById('requestNotifyBtn');
-
-    // ================= FUNÇÃO DE ÁUDIO (só funciona após toque do usuário) =================
-    let audioCtx = null;
-    function playBeep() {
-        if (!audioCtx) {
-            // Inicializa o contexto de áudio no primeiro toque
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        // Se o contexto estiver suspenso (política do navegador), ele será retomado no toque
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume().then(() => {
-                createBeep();
-            });
-        } else {
-            createBeep();
-        }
-    }
-
-    function createBeep() {
-        try {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.frequency.value = 880;
-            gain.gain.value = 0.3;
-            osc.start();
-            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 1);
-            osc.stop(audioCtx.currentTime + 1);
-        } catch (e) { console.log("Erro no áudio", e); }
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    }
-
-    // ================= NOTIFICAÇÕES =================
-    function sendNotification(title, body) {
-        if (Notification.permission === 'granted') {
-            new Notification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/1995/1995572.png' });
-        } else {
-            console.log("Notificação não permitida");
-            // Fallback: alert já será chamado separadamente
-        }
-    }
-
-    function requestNotificationPermission() {
-        if (Notification.permission === 'default') {
-            Notification.requestPermission().then(perm => {
-                if (perm === 'granted') alert('✅ Notificações ativadas!');
-                else alert('❌ Permissão negada');
-            });
-        } else if (Notification.permission === 'granted') {
-            alert('✅ Notificações já estão ativadas');
-        } else {
-            alert('❌ Permissão negada permanentemente. Ative nas configurações.');
-        }
-    }
-
-    // ================= TIMER =================
-    function updateDisplay() {
-        let mins = Math.floor(currentSeconds / 60);
-        let secs = currentSeconds % 60;
-        timerDisplay.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
-    }
-
-    function switchPhase() {
-        if (isFocus) {
-            isFocus = false;
-            currentSeconds = breakTime;
-            phaseText.innerText = "🌿 Pausa curta (5 min)";
-            const msg = '🍅 Foco concluído! Hora da pausa de 5 minutos.';
-            sendNotification('Pomodoro Zen', msg);
-            alert(msg);  // Garantido
-            playBeep();
-        } else {
-            isFocus = true;
-            currentSeconds = focusTime;
-            phaseText.innerText = "⚡ Foco (25 min)";
-            const msg = '🌿 Pausa finalizada! Volte a focar por 25 minutos.';
-            sendNotification('Pomodoro Zen', msg);
-            alert(msg);
-            playBeep();
-        }
-        updateDisplay();
-    }
-
-    function startTimer() {
-        if (running) return;
-        // Garante que o áudio seja ativado no primeiro clique
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            audioCtx.resume();
-        }
-        running = true;
-        intervalId = setInterval(() => {
-            if (!running) return;
-            if (currentSeconds <= 0) {
-                clearInterval(intervalId);
-                running = false;
-                switchPhase();
-                startTimer(); // reinicia automaticamente a próxima fase
-            } else {
-                currentSeconds--;
-                updateDisplay();
-            }
-        }, 1000);
-    }
-
-    function pauseTimer() {
-        if (!running) return;
-        running = false;
-        clearInterval(intervalId);
-    }
-
-    function resetTimer() {
-        running = false;
-        clearInterval(intervalId);
-        isFocus = true;
-        currentSeconds = focusTime;
-        phaseText.innerText = "⚡ Foco (25 min)";
-        updateDisplay();
-    }
-
-    // ================= EVENTOS =================
-    startBtn.addEventListener('click', startTimer);
-    pauseBtn.addEventListener('click', pauseTimer);
-    resetBtn.addEventListener('click', resetTimer);
-    requestNotifyBtn.addEventListener('click', requestNotificationPermission);
-
-    // Inicialização
-    updateDisplay();
-    if (Notification.permission === 'default') Notification.requestPermission();
-</script>
+<script src="scripts.js"></script>
 </body>
 </html>
