@@ -26,14 +26,13 @@
             background: #fef9e8;
             border-radius: 32px;
             padding: 30px 25px;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.1);
             text-align: center;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.1);
             border: 1px solid #e0d5c0;
         }
         h1 {
             color: #4a3b2c;
             font-size: 1.8rem;
-            margin-bottom: 10px;
         }
         .timer-circle {
             background: #f3ecd9;
@@ -65,7 +64,7 @@
             gap: 12px;
             justify-content: center;
             flex-wrap: wrap;
-            margin: 15px 0;
+            margin: 20px 0;
         }
         button {
             background: #e8ddc5;
@@ -73,25 +72,15 @@
             padding: 10px 20px;
             border-radius: 40px;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 1rem;
             color: #5c4b32;
             cursor: pointer;
-            transition: all 0.1s ease;
+            transition: 0.1s;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         button:active {
             transform: scale(0.96);
             background: #d4c5a8;
-        }
-        .notify-btn {
-            background: #2c5f2d;
-            color: white;
-            margin-top: 10px;
-            width: 100%;
-            padding: 12px;
-        }
-        .notify-btn:active {
-            background: #1e3a1e;
         }
         .subscribe {
             margin-top: 20px;
@@ -100,7 +89,6 @@
             border-radius: 50px;
             text-align: center;
             cursor: pointer;
-            transition: transform 0.1s;
             font-weight: bold;
             color: white;
         }
@@ -108,7 +96,157 @@
             transform: scale(0.97);
         }
         @media (max-width: 480px) {
-            .container {
+            .container { padding: 20px; }
+            .timer-circle { width: 180px; height: 180px; }
+            .timer-text { font-size: 2rem; }
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🍅 POMODORO ZEN</h1>
+    <div class="timer-circle">
+        <div class="timer-text" id="timerDisplay">25:00</div>
+    </div>
+    <div class="phase" id="phaseText">⚡ Foco (25 min)</div>
+    <div class="controls">
+        <button id="startBtn">▶ INICIAR</button>
+        <button id="pauseBtn">⏸ PAUSAR</button>
+        <button id="resetBtn">🔄 RESETAR</button>
+    </div>
+    <div class="subscribe" onclick="window.open('https://youtube.com/@CriadorDeMundo', '_blank')">
+        🎥 APRENDA A FAZER - INSCREVA-SE
+    </div>
+</div>
+<script>
+    // Configurações (para teste, use 10 segundos; depois mude para 25*60)
+    let FOCUS_TIME = 25 * 60;
+    let BREAK_TIME = 5 * 60;
+    let currentSeconds = FOCUS_TIME;
+    let isFocus = true;
+    let running = false;
+    let targetTimestamp = null;
+    let intervalId = null;
+
+    const timerDisplay = document.getElementById('timerDisplay');
+    const phaseText = document.getElementById('phaseText');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // Áudio
+    let audioCtx = null;
+    function playBeep() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume().then(() => createBeep());
+        } else {
+            createBeep();
+        }
+    }
+    function createBeep() {
+        try {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = 880;
+            gain.gain.value = 0.3;
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 1);
+            osc.stop(audioCtx.currentTime + 1);
+        } catch(e) { console.log("Erro áudio"); }
+        if (navigator.vibrate) navigator.vibrate([200,100,200]);
+    }
+
+    function updateDisplay() {
+        let mins = Math.floor(currentSeconds / 60);
+        let secs = currentSeconds % 60;
+        timerDisplay.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+    }
+
+    function switchPhase() {
+        if (isFocus) {
+            isFocus = false;
+            currentSeconds = BREAK_TIME;
+            phaseText.innerText = "🌿 Pausa curta (5 min)";
+        } else {
+            isFocus = true;
+            currentSeconds = FOCUS_TIME;
+            phaseText.innerText = "⚡ Foco (25 min)";
+        }
+        updateDisplay();
+        playBeep();
+    }
+
+    function tick() {
+        if (!running) return;
+        const now = Date.now();
+        if (targetTimestamp && now >= targetTimestamp) {
+            running = false;
+            if (intervalId) clearInterval(intervalId);
+            switchPhase();
+            startTimer();
+            return;
+        }
+        if (targetTimestamp) {
+            const remaining = Math.max(0, Math.floor((targetTimestamp - now) / 1000));
+            if (remaining !== currentSeconds) {
+                currentSeconds = remaining;
+                updateDisplay();
+                if (currentSeconds === 0) {
+                    running = false;
+                    clearInterval(intervalId);
+                    switchPhase();
+                    startTimer();
+                }
+            }
+        }
+    }
+
+    function startTimer() {
+        if (running) return;
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            audioCtx.resume();
+        }
+        running = true;
+        targetTimestamp = Date.now() + currentSeconds * 1000;
+        if (intervalId) clearInterval(intervalId);
+        intervalId = setInterval(tick, 200);
+    }
+
+    function pauseTimer() {
+        if (!running) return;
+        running = false;
+        if (intervalId) clearInterval(intervalId);
+        if (targetTimestamp) {
+            currentSeconds = Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000));
+            updateDisplay();
+            targetTimestamp = null;
+        }
+    }
+
+    function resetTimer() {
+        running = false;
+        if (intervalId) clearInterval(intervalId);
+        targetTimestamp = null;
+        isFocus = true;
+        currentSeconds = FOCUS_TIME;
+        phaseText.innerText = "⚡ Foco (25 min)";
+        updateDisplay();
+    }
+
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    resetBtn.addEventListener('click', resetTimer);
+    updateDisplay();
+</script>
+</body>
+</html>            .container {
                 padding: 20px;
             }
             .timer-circle {
