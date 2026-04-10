@@ -7,7 +7,7 @@
 
 body {
     background: linear-gradient(135deg, #f5f0e6 0%, #e8e0d0 100%);
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Segoe UI', system-ui, sans-serif;
     min-height: 100vh;
     display: flex;
     justify-content: center;
@@ -21,15 +21,14 @@ body {
     background: #fef9e8;
     border-radius: 32px;
     padding: 30px 25px;
-    box-shadow: 0 20px 35px rgba(0,0,0,0.1);
     text-align: center;
+    box-shadow: 0 20px 35px rgba(0,0,0,0.1);
     border: 1px solid #e0d5c0;
 }
 
 h1 {
     color: #4a3b2c;
     font-size: 1.8rem;
-    margin-bottom: 10px;
 }
 
 .timer-circle {
@@ -65,7 +64,7 @@ h1 {
     gap: 12px;
     justify-content: center;
     flex-wrap: wrap;
-    margin: 15px 0;
+    margin: 20px 0;
 }
 
 button {
@@ -74,28 +73,16 @@ button {
     padding: 10px 20px;
     border-radius: 40px;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: #5c4b32;
     cursor: pointer;
-    transition: all 0.1s ease;
+    transition: 0.1s;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 button:active {
     transform: scale(0.96);
     background: #d4c5a8;
-}
-
-.notify-btn {
-    background: #2c5f2d;
-    color: white;
-    margin-top: 10px;
-    width: 100%;
-    padding: 12px;
-}
-
-.notify-btn:active {
-    background: #1e3a1e;
 }
 
 .subscribe {
@@ -105,7 +92,6 @@ button:active {
     border-radius: 50px;
     text-align: center;
     cursor: pointer;
-    transition: transform 0.1s;
     font-weight: bold;
     color: white;
 }
@@ -115,17 +101,8 @@ button:active {
 }
 
 @media (max-width: 480px) {
-    .container {
-        padding: 20px;
-    }
-    .timer-circle {
-        width: 180px;
-        height: 180px;
-    }
-    .timer-text {
-        font-size: 2rem;
-    }
-    h1 {
-        font-size: 1.5rem;
-    }
-}
+    .container { padding: 20px; }
+    .timer-circle { width: 180px; height: 180px; }
+    .timer-text { font-size: 2rem; }
+    h1 { font-size: 1.5rem; }
+                   }
