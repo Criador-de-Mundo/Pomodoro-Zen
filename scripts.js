@@ -1,5 +1,5 @@
 // Configurações (para teste, use 10 segundos; depois mude para 25*60)
-let FOCUS_TIME = 25 * 60;   // 25 minutos (ou 10 para teste)
+let FOCUS_TIME = 10;   // 25 minutos (ou 10 para teste)
 let BREAK_TIME = 5 * 60;    // 5 minutos
 let currentSeconds = FOCUS_TIME;
 let isFocus = true;
