@@ -1,11 +1,12 @@
-// Configurações (para teste, use 10 segundos; depois mude para 25*60)
-let FOCUS_TIME = 10;   // 25 minutos (ou 10 para teste)
-let BREAK_TIME = 5 * 60;    // 5 minutos
+// Configurações
+let FOCUS_TIME = 10;   // 25 minutos
+let BREAK_TIME = 5;    // 5 minutos
 let currentSeconds = FOCUS_TIME;
 let isFocus = true;
 let running = false;
 let targetTimestamp = null;
 let intervalId = null;
+let vibrationInterval = null;
 
 // Elementos DOM
 const timerDisplay = document.getElementById('timerDisplay');
@@ -14,14 +15,13 @@ const startBtn = document.getElementById('startBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
 
-// ================= ÁUDIO (inicializado no primeiro clique) =================
+// ================= ÁUDIO =================
 let audioCtx = null;
 
 function playBeep() {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    // Se o contexto estiver suspenso, ele será retomado pelo clique do usuário
     if (audioCtx.state === 'suspended') {
         audioCtx.resume().then(() => createBeep());
     } else {
@@ -40,64 +40,54 @@ function createBeep() {
         osc.start();
         gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 1);
         osc.stop(audioCtx.currentTime + 1);
-    } catch (e) { console.log("Erro no áudio", e); }
-    // Vibração (funciona mesmo com tela desligada)
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    } catch (e) {
+        console.log("Erro no áudio", e);
+    }
 }
 
-// ================= FUNÇÕES DO TIMER =================
+// ================= VIBRAÇÃO CONTÍNUA =================
+function startContinuousVibration() {
+    if (vibrationInterval) clearInterval(vibrationInterval);
+    vibrationInterval = setInterval(() => {
+        if (navigator.vibrate) navigator.vibrate(500); // vibra 500ms a cada 1s
+    }, 1000);
+}
+
+function stopContinuousVibration() {
+    if (vibrationInterval) {
+        clearInterval(vibrationInterval);
+        vibrationInterval = null;
+    }
+    if (navigator.vibrate) navigator.vibrate(0);
+}
+
+// ================= TIMER =================
 function updateDisplay() {
     let mins = Math.floor(currentSeconds / 60);
     let secs = currentSeconds % 60;
-    timerDisplay.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+    timerDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-function switchPhase() {
+function finishPhaseAndWait() {
+    running = false;
+    if (intervalId) clearInterval(intervalId);
+    targetTimestamp = null;
+    playBeep();                // toca um beep
+    startContinuousVibration(); // vibra até o usuário agir
+
     if (isFocus) {
-        // Foco terminou -> pausa
-        isFocus = false;
-        currentSeconds = BREAK_TIME;
-        phaseText.innerText = "🌿 Pausa curta (5 min)";
+        phaseText.innerText = "🍅 Foco concluído! Toque em INICIAR para a pausa";
+        startBtn.textContent = "▶ INICIAR PAUSA";
     } else {
-        // Pausa terminou -> foco
-        isFocus = true;
-        currentSeconds = FOCUS_TIME;
-        phaseText.innerText = "⚡ Foco (25 min)";
+        phaseText.innerText = "🌿 Pausa concluída! Toque em INICIAR para o foco";
+        startBtn.textContent = "▶ INICIAR FOCO";
     }
-    updateDisplay();
-    playBeep();   // toca som e vibra
-}
-
-function tick() {
-    if (!running) return;
-    const now = Date.now();
-    if (targetTimestamp && now >= targetTimestamp) {
-        // Tempo esgotou
-        running = false;
-        if (intervalId) clearInterval(intervalId);
-        switchPhase();
-        startTimer(); // reinicia automaticamente a próxima fase
-        return;
-    }
-    if (targetTimestamp) {
-        const remaining = Math.max(0, Math.floor((targetTimestamp - now) / 1000));
-        if (remaining !== currentSeconds) {
-            currentSeconds = remaining;
-            updateDisplay();
-            if (currentSeconds === 0) {
-                // Força troca (caso o timestamp tenha passado muito rápido)
-                running = false;
-                clearInterval(intervalId);
-                switchPhase();
-                startTimer();
-            }
-        }
-    }
+    startBtn.classList.add("btn-primary");
 }
 
 function startTimer() {
     if (running) return;
-    // Ativa o áudio no primeiro clique (necessário para mobile)
+    stopContinuousVibration();       // para qualquer vibração pendente
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         audioCtx.resume();
@@ -106,13 +96,60 @@ function startTimer() {
     targetTimestamp = Date.now() + currentSeconds * 1000;
     if (intervalId) clearInterval(intervalId);
     intervalId = setInterval(tick, 200);
+    startBtn.textContent = "▶ INICIAR";
+    phaseText.innerText = isFocus ? "⚡ Foco (25 min)" : "🌿 Pausa curta (5 min)";
+    startBtn.classList.add("btn-primary");
+}
+
+function tick() {
+    if (!running) return;
+    const now = Date.now();
+    if (targetTimestamp && now >= targetTimestamp) {
+        running = false;
+        if (intervalId) clearInterval(intervalId);
+        finishPhaseAndWait();
+        return;
+    }
+    if (targetTimestamp) {
+        const remaining = Math.max(0, Math.floor((targetTimestamp - now) / 1000));
+        if (remaining !== currentSeconds) {
+            currentSeconds = remaining;
+            updateDisplay();
+            if (currentSeconds === 0) {
+                running = false;
+                clearInterval(intervalId);
+                finishPhaseAndWait();
+            }
+        }
+    }
+}
+
+function startNextPhase() {
+    if (running) return;
+    // Se está em espera (vibração ativa), troca de fase
+    if (vibrationInterval !== null) {
+        stopContinuousVibration();
+        if (isFocus) {
+            isFocus = false;
+            currentSeconds = BREAK_TIME;
+        } else {
+            isFocus = true;
+            currentSeconds = FOCUS_TIME;
+        }
+        updateDisplay();
+        startTimer();
+    } else {
+        // Caso contrário, apenas inicia o timer (se estiver parado)
+        if (!running && currentSeconds > 0) {
+            startTimer();
+        }
+    }
 }
 
 function pauseTimer() {
     if (!running) return;
     running = false;
     if (intervalId) clearInterval(intervalId);
-    // recalcula currentSeconds baseado no tempo restante
     if (targetTimestamp) {
         currentSeconds = Math.max(0, Math.floor((targetTimestamp - Date.now()) / 1000));
         updateDisplay();
@@ -123,15 +160,18 @@ function pauseTimer() {
 function resetTimer() {
     running = false;
     if (intervalId) clearInterval(intervalId);
+    stopContinuousVibration();
     targetTimestamp = null;
     isFocus = true;
     currentSeconds = FOCUS_TIME;
     phaseText.innerText = "⚡ Foco (25 min)";
     updateDisplay();
+    startBtn.textContent = "▶ INICIAR";
+    startBtn.classList.add("btn-primary");
 }
 
 // ================= EVENTOS =================
-startBtn.addEventListener('click', startTimer);
+startBtn.addEventListener('click', startNextPhase);
 pauseBtn.addEventListener('click', pauseTimer);
 resetBtn.addEventListener('click', resetTimer);
 
